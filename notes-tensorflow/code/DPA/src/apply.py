@@ -21,6 +21,7 @@ LOCAL_RESULT_PATH = "../data/result/"
 LOCAL_APPLY_PATH = input.LOCAL_APPLY_PATH
 N_GPU = 4
 BATCH_SIZE = N_GPU*1000
+PARALLEL=4
 
 CONFIG = tf.ConfigProto(
     allow_soft_placement=True,
@@ -63,7 +64,7 @@ def evaluate(pid):
             saver.restore(sess, ckpt.model_checkpoint_path)
 
             for idx,file in enumerate(file_list):
-                if idx % N_GPU != pid :
+                if idx % PARALLEL != pid :
                     continue
 
                 t0 = time.time()
@@ -109,14 +110,15 @@ def evaluate(pid):
 
 def main(argv=None):
     # evaluate(0)
-    pp=range(4)
-    for i in pp:
+    pid_list=range(PARALLEL)
+    for i in pid_list:
         p=Process(target=evaluate,args=(i,))
         p.start()
 
 
 if __name__ == '__main__':
-    tf.app.run()
+    # tf.app.run()
+    main()
 
 
 

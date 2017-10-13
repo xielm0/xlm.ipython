@@ -5,7 +5,6 @@ import processing as pr
 import input
 
 # 配置神经网络的参数
-# INPUT_NODE = 29259
 OUTPUT_NODE = 1
 EMBEDDING_SIZE = 32
 LAYER1_NODE = 512

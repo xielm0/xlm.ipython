@@ -37,6 +37,8 @@ CONFIG.gpu_options.allow_growth = True
 
 # 备份tensorboard日志
 def backup_tensorboardLogs():
+    # cmd="find %s -type d   -mtime +1  -exec rm -R {} \;" %(TENSORBOARD_PATH)
+    os.system(cmd)
     match = 'events.out.tfevents.'
     for file_name in os.listdir(TENSORBOARD_PATH):
         if match in file_name:
@@ -48,6 +50,7 @@ def backup_tensorboardLogs():
             print(cmd)
             print("running .....")
             os.system(cmd)
+
 
 
 def average_gradients(tower_grads):
