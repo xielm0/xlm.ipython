@@ -29,6 +29,11 @@ TENSORBOARD_PATH ="../logs/tensorboard/"
 MODEL_SAVE_PATH = "../models/"
 MODEL_NAME = "model.ckpt"
 
+if not os.path.exists(TENSORBOARD_PATH):
+    os.mkdir(TENSORBOARD_PATH)
+if not os.path.exists(MODEL_SAVE_PATH):
+    os.mkdir(MODEL_SAVE_PATH)
+
 CONFIG = tf.ConfigProto(
     allow_soft_placement=True,
     log_device_placement=False)

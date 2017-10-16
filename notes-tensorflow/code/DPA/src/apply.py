@@ -28,6 +28,9 @@ CONFIG = tf.ConfigProto(
     log_device_placement=False)
 CONFIG.gpu_options.allow_growth = True
 
+if not os.path.exists(LOCAL_RESULT_PATH):
+    os.mkdir(LOCAL_RESULT_PATH)
+
 
 def evaluate(pid):
     """
