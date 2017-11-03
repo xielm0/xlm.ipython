@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import time
+
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
+
 import mnist_inference
 
 BATCH_SIZE = 100

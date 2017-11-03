@@ -1,9 +1,11 @@
 # -*- coding:utf-8 -*-
-from datetime import datetime
 import os
 import time
+
 import tensorflow as tf
+
 import mnist_inference
+
 
 # 定义训练神经网络需要用到的配置
 BATCH_SIZE = 128
