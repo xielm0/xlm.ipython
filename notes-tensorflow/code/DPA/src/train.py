@@ -42,7 +42,7 @@ CONFIG.gpu_options.allow_growth = True
 
 # 备份tensorboard日志
 def backup_tensorboardLogs():
-    # cmd="find %s -type d   -mtime +1  -exec rm -R {} \;" %(TENSORBOARD_PATH)
+    cmd="find %s -type d   -mtime +1  -exec rm -R {} \;" %(TENSORBOARD_PATH)
     os.system(cmd)
     match = 'events.out.tfevents.'
     for file_name in os.listdir(TENSORBOARD_PATH):
@@ -166,7 +166,7 @@ def main(argv=None):
         threads = tf.train.start_queue_runners(coord=coord,sess=sess)
         summary_writer = tf.summary.FileWriter(TENSORBOARD_PATH, sess.graph)
 
-        for step in xrange(TRAINING_STEPS):
+        for step in range(TRAINING_STEPS):
 
             if step != 0 and step % 100 == 0:
                 # 性能分析
