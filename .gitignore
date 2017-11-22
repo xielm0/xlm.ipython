@@ -3,6 +3,7 @@
 .idea
 data
 logs
+models
 *.pyc
 
 
@@ -19,6 +20,6 @@ han-DL
 cs231
 assignment1
 
-#DeepLearning ½Ì³Ì
-#https://github.com/xiaohu2015/DeepLearning_tutorials
-DeepLearning_tutorials
+
+#yahoo¼ø»Æ
+https://github.com/mdietrichstein/tensorflow-open_nsfw

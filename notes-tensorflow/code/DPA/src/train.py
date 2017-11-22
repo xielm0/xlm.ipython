@@ -57,7 +57,6 @@ def backup_tensorboardLogs():
             os.system(cmd)
 
 
-
 def average_gradients(tower_grads):
     """
     同步模式，计算梯度的平均值
@@ -81,6 +80,22 @@ def average_gradients(tower_grads):
         return average_grads
 
 
+def get_loss(x, y_,  scope):
+    y = inference(x, train_flag=True)
+    #cross_entropy =tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=y_))
+    cross_entropy = -tf.reduce_mean(y_ * tf.log(tf.clip_by_value(y, 1e-10, 1.0)) + (1- y_) * tf.log(tf.clip_by_value(1-y, 1e-10, 1.0)))
+    # scope="GPU_i" ,so计算当前GPU上的loss
+    regularization_loss = tf.add_n(tf.get_collection('losses', scope))
+    loss = cross_entropy + regularization_loss
+    #
+    with tf.name_scope("loss"):
+        tf.summary.scalar("cross_entropy", cross_entropy)
+        tf.summary.scalar("regularization_loss", regularization_loss)
+        tf.summary.scalar("loss", loss)
+
+    return loss
+
+
 def build_model(x_list, y_):
     """
 
@@ -90,7 +105,7 @@ def build_model(x_list, y_):
     """
     global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),
                                   trainable=False)
-    learning_rate = tf.train.exponential_decay(LEARNING_RATE, global_step, DECAY_STEPS,DECAYG_RATE)
+    learning_rate = tf.train.exponential_decay(LEARNING_RATE, global_step, DECAY_STEPS, DECAYG_RATE)
     tf.summary.scalar('learning-rate', learning_rate)
 
     # opt = tf.train.GradientDescentOptimizer(learning_rate)
@@ -144,24 +159,21 @@ def build_model(x_list, y_):
 
 def main(argv=None):
     # clear tensorboard logs
-    # cmd = "/bin/rm  " + TENSORBOARD_PATH + "events.out.tfevents.*"
-    # os.system(cmd)
-    backup_tensorboardLogs()
-    # test data reading
+    cmd = "/bin/rm  " + TENSORBOARD_PATH + "events.out.tfevents.*"
+    os.system(cmd)
+    # backup_tensorboardLogs()
+
     with tf.device('/cpu:0'):
         with tf.name_scope("input"):
             x_list, y_ = input.get_train_data(BATCH_NUM)
 
         global_step, loss_gpu_dir, train_op, opt = build_model(x_list, y_)
         #
-        saver = tf.train.Saver(tf.all_variables())
-        summary_op = tf.summary.merge_all()
-
-        init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
+        merged_summary_op = tf.summary.merge_all()
 
     with tf.Session(config=CONFIG) as sess:
-        init.run()
-        sess.run(tf.local_variables_initializer())
+        tf.local_variables_initializer().run()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord,sess=sess)
         summary_writer = tf.summary.FileWriter(TENSORBOARD_PATH, sess.graph)
@@ -185,7 +197,7 @@ def main(argv=None):
                 print(format_str % (step, loss_value1, loss_value2, loss_value3, loss_value4, examples_per_sec, sec_per_batch))
 
                 # 写tensorboard日志
-                summary = sess.run(summary_op)
+                summary = sess.run(merged_summary_op)
                 summary_writer.add_run_metadata(run_metadata, 'step%03d' % step)
                 summary_writer.add_summary(summary, step)
             else:

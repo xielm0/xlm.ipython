@@ -87,7 +87,9 @@ def evaluate():
     epoch_num = n / BATCH_SIZE if n % BATCH_SIZE == 0 else (n / BATCH_SIZE) + 1
     print("n= %s , epoch_num= %s " %(n,epoch_num))
     #
-    saver = tf.train.Saver()
+    # saver = tf.train.Saver()
+    ema=tf.train.ExponentialMovingAverage(train.MOVING_AVERAGE_DECAY)
+    saver = tf.train.Saver(ema.variables_to_restore())
 
     with tf.Session(config=CONFIG) as sess:
         coord = tf.train.Coordinator()

@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 
-import mnist_inference2
+import mnist_inference_cnn
 
 BATCH_SIZE = 100
 LEARNING_RATE_BASE = 0.01
@@ -39,7 +39,7 @@ tf.app.flags.DEFINE_integer(
 
 def build_model(x, y_, n_worker):
     regularizer = tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
-    y = mnist_inference2.inference(x, True, regularizer)
+    y = mnist_inference_cnn.inference(x, True, regularizer)
     global_step = tf.Variable(0, trainable=False)
 
     variable_averages = tf.train.ExponentialMovingAverage(
@@ -91,12 +91,12 @@ def main(argv=None):
                 cluster=cluster)):
         x = tf.placeholder(tf.float32, [
             None,
-            mnist_inference2.IMAGE_SIZE,
-            mnist_inference2.IMAGE_SIZE,
-            mnist_inference2.NUM_CHANNELS],
+            mnist_inference_cnn.IMAGE_SIZE,
+            mnist_inference_cnn.IMAGE_SIZE,
+            mnist_inference_cnn.NUM_CHANNELS],
             name='x-input')
         y_ = tf.placeholder(
-            tf.float32, [None, mnist_inference2.OUTPUT_NODE],
+            tf.float32, [None, mnist_inference_cnn.OUTPUT_NODE],
             name='y-input')
         global_step, loss, train_op, opt = build_model(
             x, y_, n_workers)
@@ -132,9 +132,9 @@ def main(argv=None):
         while not sv.should_stop():
             xs, ys = mnist.train.next_batch(BATCH_SIZE)
             reshaped_xs = np.reshape(xs, (BATCH_SIZE,
-                                          mnist_inference2.IMAGE_SIZE,
-                                          mnist_inference2.IMAGE_SIZE,
-                                          mnist_inference2.NUM_CHANNELS))
+                                          mnist_inference_cnn.IMAGE_SIZE,
+                                          mnist_inference_cnn.IMAGE_SIZE,
+                                          mnist_inference_cnn.NUM_CHANNELS))
             _, loss_value, global_step_value = sess.run(
                 [train_op, loss, global_step], feed_dict={x: reshaped_xs, y_: ys})
             if global_step_value >= TRAINING_STEPS:

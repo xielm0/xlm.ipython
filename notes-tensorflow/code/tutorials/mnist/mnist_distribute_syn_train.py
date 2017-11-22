@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 
-import mnist_inference
+import mnist_inference_dnn
 
 BATCH_SIZE = 100
 LEARNING_RATE_BASE = 0.01
@@ -28,6 +28,7 @@ tf.app.flags.DEFINE_string('job_name', 'worker', ' "ps" or "worker" ')
 tf.app.flags.DEFINE_string( 'worker_hosts', 'tf-worker0:2222,tf-worker1:1111', '....')
 tf.app.flags.DEFINE_integer( 'task_id', 0, 'Task ID of the worker/replica running the training.')
 
+
 def create_optimizer( sync_flag, learning_rate, num_workers ):
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     # 如果是同步模式, 通过 tf.train.SyncReplicasOptimizer函数，实现参数同步更新。
@@ -47,7 +48,7 @@ def build_model(x, y_, n_workers):
     # L2
     regularizer = tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
     #
-    y = mnist_inference.inference(x, regularizer)
+    y = mnist_inference_dnn.inference(x, regularizer)
     #
     global_step = tf.Variable(0, trainable=False)
 
@@ -88,9 +89,9 @@ def main(argv=None):
         ps_device="/job:ps/cpu:0",
         cluster=cluster)
     with tf.device(device_setter):
-        x = tf.placeholder(tf.float32, [None, mnist_inference.INPUT_NODE ],
+        x = tf.placeholder(tf.float32, [None, mnist_inference_dnn.INPUT_NODE ],
             name='x-input')
-        y_ = tf.placeholder(tf.float32, [None, mnist_inference.OUTPUT_NODE],
+        y_ = tf.placeholder(tf.float32, [None, mnist_inference_dnn.OUTPUT_NODE],
             name='y-input')
         #
         global_step, loss, train_op, opt = build_model(x, y_, n_workers)
@@ -132,7 +133,7 @@ def main(argv=None):
             # get_input
             xs, ys = mnist.train.next_batch(BATCH_SIZE)
             reshaped_xs = np.reshape(xs, (BATCH_SIZE,
-                                          mnist_inference.INPUT_NODE))
+                                          mnist_inference_dnn.INPUT_NODE))
             # train
             _, loss_value, global_step_value = sess.run(
                 [train_op, loss, global_step], feed_dict={x: reshaped_xs, y_: ys})

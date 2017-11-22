@@ -3,20 +3,20 @@ import time
 
 import tensorflow as tf
 
-import mnist_inference2
+import mnist_inference_cnn
 
 
 # 定义训练神经网络需要用到的配置
 BATCH_SIZE = 100
-LEARNING_RATE_BASE = 0.0001
+LEARNING_RATE_BASE = 0.001
 LEARNING_RATE_DECAY = 0.99
 REGULARAZTION_RATE = 0.0001
-TRAINING_STEPS = 1000
+TRAINING_STEPS = 2000
 MOVING_AVERAGE_DECAY = 0.99
 N_GPU = 4
 
 # 定义日志和模型输出的路径
-MODEL_SAVE_PATH = "./distribute_syn_multi_gpu_models/"
+MODEL_SAVE_PATH = "./distribute_syn_multi_gpu_oneTaskMultiGPU_models"
 DATA_PATH = "./mnist_tfrecords"
 
 
@@ -64,12 +64,12 @@ def get_input():
         min_after_dequeue=min_after_dequeue)
 
 
-def get_loss(x, y_, regularizer, scope):
-    y = mnist_inference2.inference(x, train=True, regularizer=regularizer)
-    cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y, labels=y_))
-    regularization_loss = tf.add_n(tf.get_collection('losses', scope))
-    loss = cross_entropy + regularization_loss
-    return loss
+# def get_loss(x, y_, regularizer, scope):
+#     y = mnist_inference.inference(x, train=True, regularizer=regularizer)
+#     cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y, labels=y_))
+#     regularization_loss = tf.add_n(tf.get_collection('losses', scope))
+#     loss = cross_entropy + regularization_loss
+#     return loss
 
 
 def average_gradients(tower_grads):
@@ -101,17 +101,21 @@ def main(argv=None):
         server.join()
         # ps服务器运行到此为止
 
-
     # 以下worker服务器做的事情
     is_chief = (FLAGS.task_id == 0)
-    worker_device = "/job:worker/task:%d" % FLAGS.task_id
+    worker_device = "/job:worker/task:%d/cpu:0" % FLAGS.task_id
     with tf.Graph().as_default(), tf.device(
             tf.train.replica_device_setter(
                 worker_device=worker_device,
                 ps_device="/job:ps/cpu:0",
                 cluster=cluster)):
         x, y_ = get_input()
+
+
         regularizer = tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
+
+        y = mnist_inference_cnn.inference(x, train=True, regularizer=regularizer)
+
         global_step = tf.get_variable(
             'global_step', [], initializer=tf.constant_initializer(0),
             trainable=False)
@@ -120,29 +124,23 @@ def main(argv=None):
         #     LEARNING_RATE_DECAY
         # )
         learning_rate = LEARNING_RATE_BASE
-
-
-        grad_opt = tf.train.GradientDescentOptimizer(learning_rate)
-
+        # grad_opt = tf.train.GradientDescentOptimizer(learning_rate)
+        grad_opt = tf.train.AdamOptimizer(learning_rate)
         tower_grads = []
 
         # 记录每个GPU的损失函数值
         loss_gpu_dir = {}
         #
-
         # 将神经网络的优化过程跑在不同的GPU上
         for i in xrange(N_GPU):
-            worker_device = "/job:worker/task:%d/gpu:%d" % (FLAGS.task_id, i)
-            with tf.device(
-                tf.train.replica_device_setter(
-                    worker_device=worker_device,
-                    ps_device="/job:ps/cpu:0",
-                    cluster=cluster)):
-            # with tf.device("/job:worker/task:%d/gpu:%d" % (FLAGS.task_id, i)):
+            with tf.device("/job:worker/task:%d/gpu:%d" % (FLAGS.task_id, i)):
                 with tf.name_scope('GPU_%d' % i) as scope:
 
-                    cur_loss = get_loss(x, y_, regularizer, scope)
+                    # cur_loss = get_loss(x, y_, regularizer, scope)
                     #
+                    cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y, labels=y_))
+                    regularization_loss = tf.add_n(tf.get_collection('losses'))
+                    cur_loss = cross_entropy + regularization_loss
                     loss_gpu_dir['GPU_%d' % i] = cur_loss
                     #
                     tf.get_variable_scope().reuse_variables()
@@ -155,10 +153,10 @@ def main(argv=None):
 
         # 计算变量的平均梯度，并输出到TensorBoard日志
         grads = average_gradients(tower_grads)
-        for grad, var in grads:
-            if grad is not None:
-                tf.summary.histogram(
-                    'gradients_on_average/%s' % var.op.name, grad)
+        # for grad, var in grads:
+        #     if grad is not None:
+        #         tf.summary.histogram(
+        #             'gradients_on_average/%s' % var.op.name, grad)
         # 使用平均梯度更新参数
         tf.get_variable_scope()._reuse = False
 
@@ -169,9 +167,7 @@ def main(argv=None):
             # replica_id=FLAGS.task_id)
             use_locking=True)
 
-        #### debug
         apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
-        ####
         for var in tf.trainable_variables():
             tf.summary.histogram(var.op.name, var)
 
@@ -183,6 +179,7 @@ def main(argv=None):
         tf.get_variable_scope()._reuse = True
 
         train_op = tf.group(apply_gradient_op, variables_averages_op)
+        # train_op = apply_gradient_op
 
         saver = tf.train.Saver()
         summary_op = tf.summary.merge_all()
@@ -199,45 +196,45 @@ def main(argv=None):
                                  summary_op=summary_op,
                                  saver=saver,
                                  global_step=global_step,
-                                 save_model_secs=60,
-                                 save_summaries_secs=60)
+                                 save_model_secs=30,
+                                 save_summaries_secs=30)
 
         sess_config = tf.ConfigProto(allow_soft_placement=True,
                                      log_device_placement=False)
-        sess = sv.prepare_or_wait_for_session(
-            server.target, config=sess_config)
-        # with sv.prepare_or_wait_for_session(
-        #     server.target, config=sess_config) as sess:
-        if is_chief:
-            sv.start_queue_runners(sess, [chief_queue_runner])
-            sess.run(init_tokens_op)
+        # sess = sv.prepare_or_wait_for_session(
+        #     server.target, config=sess_config)
+        with sv.prepare_or_wait_for_session(
+            server.target, config=sess_config) as sess:
+            if is_chief:
+                sv.start_queue_runners(sess, [chief_queue_runner])
+                sess.run(init_tokens_op)
 
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        step = 0
-        start_time = time.time()
+            step = 0
+            start_time = time.time()
 
-        while not sv.should_stop():
-            _, global_step_value, loss_value1, loss_value2, loss_value3, loss_value4 = sess.run(
-                [train_op, global_step] + loss_gpu_dir.values())
+            while not sv.should_stop():
+                _, global_step_value, loss_value1, loss_value2, loss_value3, loss_value4 = sess.run(
+                    [train_op, global_step] + loss_gpu_dir.values())
 
-            if global_step_value >= TRAINING_STEPS:
-                break
-            if step > 0 and step % 100 == 0:
-                duration = time.time() - start_time
-                sec_per_batch = duration / (global_step_value * n_workers)
-                format_str = ("After %d training steps (%d global steps), "
-                                "loss on training batch is %g, %g, %g, %g. "
-                                "(%.3f sec/batch)")
-                print(format_str % (step, global_step_value,
-                                    loss_value1, loss_value2,
-                                    loss_value3, loss_value4,
-                                    sec_per_batch))
-            step += 1
-        coord.request_stop()
-        coord.join(threads)
-        sess.close()
+                if global_step_value >= TRAINING_STEPS:
+                    break
+                if step > 0 and step % 100 == 0:
+                    duration = time.time() - start_time
+                    sec_per_batch = duration / (global_step_value * n_workers * N_GPU)
+                    format_str = ("After %d training steps (%d global steps), "
+                                    "loss on training batch is %g, %g, %g, %g. "
+                                    "(%.3f sec/batch)")
+                    print(format_str % (step, global_step_value,
+                                        loss_value1, loss_value2,
+                                        loss_value3, loss_value4,
+                                        sec_per_batch))
+                step += 1
+            coord.request_stop()
+            coord.join(threads)
+            # sess.close()
         sv.stop()
 
 

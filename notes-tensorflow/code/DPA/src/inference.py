@@ -110,19 +110,4 @@ def inference(input_list, train_flag=False ):
     return res
 
 
-def get_loss(x, y_,  scope):
-    y = inference(x, train_flag=True)
-    #cross_entropy =tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=y, labels=y_))
-    cross_entropy = -tf.reduce_mean(y_ * tf.log(tf.clip_by_value(y, 1e-10, 1.0)) + (1- y_) * tf.log(tf.clip_by_value(1-y, 1e-10, 1.0)))
-    # scope="GPU_i" ,so计算当前GPU上的loss
-    regularization_loss = tf.add_n(tf.get_collection('losses', scope))
-    loss = cross_entropy + regularization_loss
-    #
-    with tf.name_scope("loss"):
-        tf.summary.scalar("cross_entropy", cross_entropy)
-        tf.summary.scalar("regularization_loss", regularization_loss)
-        tf.summary.scalar("loss", loss)
-
-    return loss
-
 
