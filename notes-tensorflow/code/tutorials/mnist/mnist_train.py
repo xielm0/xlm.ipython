@@ -8,7 +8,7 @@ import mnist_input as input
 
 
 MAX_STEPS = 20000
-INITIAL_LEARNING_RATE = 1e-2
+INITIAL_LEARNING_RATE = 0.001
 DECAYG_RATE = 0.99
 DECAY_STEPS = 100
 MOVING_AVERAGE_DECAY = 0.99
@@ -24,11 +24,11 @@ SESS_CONFIG.gpu_options.allow_growth = True
 
 def get_loss(logits, labels, scope):
     # y_conv = tf.clip_by_value(tf.nn.softmax(logits), 1e-10, 1.0)
-    # cross_entropy = tf.reduce_mean(-tf.reduce_sum(labels * tf.log(y_conv), reduction_indices=[1]))
+    cross_entropy = tf.reduce_mean(-tf.reduce_sum(labels * tf.log(logits), reduction_indices=[1]))
     # cross_entropy_1 = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels)
-    cross_entropy_1 = tf.nn.sparse_softmax_cross_entropy_with_logits(
-        logits=logits, labels=tf.argmax(labels,1))
-    cross_entropy = tf.reduce_mean(cross_entropy_1, name='cross_entropy')
+    # cross_entropy_1 = tf.nn.sparse_softmax_cross_entropy_with_logits(
+    #     logits=logits, labels=tf.argmax(labels,1))
+    # cross_entropy = tf.reduce_mean(cross_entropy_1, name='cross_entropy')
     # scope="GPU_i" ,so计算当前GPU上的loss
     # regularization_loss = tf.add_n(tf.get_collection('losses', scope))
     regularization_loss=0
@@ -49,23 +49,25 @@ def main(argv=None):
         #
         mnist = input.get_mnist()
 
-    global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
-    learning_rate = tf.train.exponential_decay(INITIAL_LEARNING_RATE, global_step, DECAY_STEPS, DECAYG_RATE)
-    opt = tf.train.GradientDescentOptimizer(learning_rate)
-    # opt = tf.train.AdamOptimizer(1e-5)
+    # global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
+    # learning_rate = tf.train.exponential_decay(INITIAL_LEARNING_RATE, global_step, DECAY_STEPS, DECAYG_RATE)
+    # opt = tf.train.GradientDescentOptimizer(learning_rate)
 
     i=1
     with tf.device('/gpu:%d' % i):
         with tf.name_scope('GPU_%d' % i) as scope:
-            y = inference.inference(x, train_flag=True)
-            loss = get_loss(y, y_, scope)
-            train_op = opt.minimize(loss,global_step=global_step)
+            y_conv = inference.inference(x)
+            loss = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_conv), reduction_indices=[1]))
+            # loss = get_loss(y_conv, y_, scope)
+            # train_op = opt.minimize(loss,global_step=global_step)
+            opt = tf.train.AdamOptimizer(1e-4)
+            train_op = opt.minimize(loss)
 
     saver = tf.train.Saver()
     with tf.Session(config=SESS_CONFIG) as sess:
         tf.global_variables_initializer().run()
         for step in range(MAX_STEPS):
-            batch = mnist.train.next_batch(256)
+            batch = mnist.train.next_batch(50)
             if step % 100 == 0:
                 _,loss_value = sess.run([train_op,loss],feed_dict={x: batch[0], y_: batch[1]})
                 print("step %d, loss = %.10f "%(step, loss_value))

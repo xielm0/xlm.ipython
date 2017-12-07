@@ -113,7 +113,8 @@ def residual_v3(x, name, out_depth, stride=1, is_training=False):
 
 def inference(input_x,is_training=False):
     """
-    34-layer, 如果是152-layer,
+    50-layer,
+    论文中input size = 224 x 224 ,而cifar10的输入是24 x24
     """
     res_fuc =residual_v2
     with tf.variable_scope("layer1") :
@@ -123,25 +124,25 @@ def inference(input_x,is_training=False):
         net = tf.nn.max_pool(net, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool1')
 
     # res1
-    net = res_fuc(net,"res64_1",256,1, is_training,first_block=True)
-    net = res_fuc(net,"res64_2",256,1, is_training)
-    net = res_fuc(net,"res64_3",256,1, is_training)
+    net = res_fuc(net,"res64_1",128,1, is_training,first_block=True)
+    net = res_fuc(net,"res64_2",128,1, is_training)
+    net = res_fuc(net,"res64_3",128,1, is_training)
     #
-    net = res_fuc(net,"res128_1",512,2, is_training)
-    net = res_fuc(net,"res128_2",512,1, is_training)
-    net = res_fuc(net,"res128_3",512,1, is_training)
-    net = res_fuc(net,"res128_4",512,1, is_training)
+    net = res_fuc(net,"res128_1",256,2, is_training)
+    net = res_fuc(net,"res128_2",256,1, is_training)
+    net = res_fuc(net,"res128_3",256,1, is_training)
+    net = res_fuc(net,"res128_4",256,1, is_training)
     #
-    net = res_fuc(net,"res256_1",1024,2, is_training)
-    net = res_fuc(net,"res256_2",1024,1, is_training)
-    net = res_fuc(net,"res256_3",1024,1, is_training)
-    net = res_fuc(net,"res256_4",1024,1, is_training)
-    net = res_fuc(net,"res256_5",1024,1, is_training)
-    net = res_fuc(net,"res256_6",1024,1, is_training)
-    #
-    net = res_fuc(net,"res512_4",2048,1, is_training)
-    net = res_fuc(net,"res512_5",2048,1, is_training)
-    net = res_fuc(net,"res512_6",2048,1, is_training)
+    net = res_fuc(net,"res256_1",512,2, is_training)
+    net = res_fuc(net,"res256_2",512,1, is_training)
+    net = res_fuc(net,"res256_3",512,1, is_training)
+    net = res_fuc(net,"res256_4",512,1, is_training)
+    # net = res_fuc(net,"res256_5",512,1, is_training)
+    # net = res_fuc(net,"res256_6",512,1, is_training)
+    # #
+    # net = res_fuc(net,"res512_1",1024,2, is_training)
+    # net = res_fuc(net,"res512_2",1024,1, is_training)
+    # net = res_fuc(net,"res512_3",1024,1, is_training)
     #
     net = slim2.batch_norm('bn_last', net, is_training)
     net = tf.nn.relu(net,"relu_last")
@@ -163,7 +164,7 @@ resnet_model，DBA采用的是bn + relu + conv ,是因为
 实验结论：
 depth=50-layer/4
 res , act=relu , sgd=0.5 , bn=None , acc=0.821
-res , act=relu , sgd=0.5 , first_block=True , acc=0.853
+res , act=relu , sgd=0.5 , first_block=True , acc=0.853 --比alexnet差的原因是pool层过多
 res , act=relu , sgd=0.5 , first_block=False, acc=0.853
 res-v3 , acc=0.789
 depth=50-layer

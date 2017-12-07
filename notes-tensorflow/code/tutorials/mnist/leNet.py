@@ -84,7 +84,8 @@ def train():
         for i in range(20000):
             batch = mnist.train.next_batch(50)
             if i%100 == 0:
-                _,train_accuracy = sess.run([train_step,accuracy],feed_dict={ x:batch[0], y_: batch[1] })
+                _,loss_value,train_accuracy = sess.run([train_step,cross_entropy,accuracy],feed_dict={ x:batch[0], y_: batch[1] })
+                print("step %d, loss = %.10f "%(i, loss_value))
                 print("step %d, training accuracy %g"%(i, train_accuracy))
             else:
                 _ = sess.run(train_step,feed_dict={ x:batch[0], y_: batch[1] })

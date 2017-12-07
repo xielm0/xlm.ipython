@@ -106,7 +106,7 @@ def train():
                 # 仅仅执行
                 _, loss_value = sess.run([train_op, loss])
 
-            if step % 1000 == 0 or (step + 1) == MAX_STEPS:
+            if step % 500 == 0 or (step + 1) == MAX_STEPS:
                 checkpoint_path = os.path.join(CKPT_DIR, CKPT_NAME)
                 saver.save(sess, checkpoint_path, global_step=step)
 

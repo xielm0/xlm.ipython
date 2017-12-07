@@ -104,7 +104,7 @@ def batch_norm(name, x, is_training=False):
         else:
             mean, variance = moving_mean, moving_variance
 
-    return tf.nn.batch_normalization(x, mean, variance, beta, gamma, 1e-5)
+    return tf.nn.batch_normalization(x, mean, variance, beta, gamma, 1e-8)
 
 
 def subsample(inputs, stride, scope=None):
@@ -126,6 +126,13 @@ def shortcut(x,name,out_depth,stride=1, activation_fn=None):
         return shortcut
 
 
+
+def bn_conv(x,name,depth, ksize=[3,3],stride=1,activation_fn=tf.nn.relu,is_training=False):
+    with tf.variable_scope(name):
+        x = batch_norm('bn', x, is_training)
+        x = activation_fn(x)
+        x = conv2d(x, 'conv', depth,ksize, stride=stride, activation_fn=None)
+        return x
 
 
 

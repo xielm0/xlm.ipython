@@ -5,7 +5,7 @@ data
 logs
 models
 *.pyc
-
+object_detection
 
 
 #可以下载,只记录地址

@@ -10,7 +10,7 @@ def download():
 
 
 def get_mnist():
-    mnist = input_data.read_data_sets("/export/Data/MNIST_data", dtype=tf.uint8, one_hot=True)
+    mnist = input_data.read_data_sets("/export/Data/MNIST_data", one_hot=True)
     return mnist
 
 

@@ -2,7 +2,6 @@
 import tensorflow as tf
 REG_RATE=1e-4
 
-
 def conv_op(input_op, name, ksize, strides):
     with tf.variable_scope(name) as scope:
         n_in = input_op.get_shape()[-1].value
@@ -10,20 +9,22 @@ def conv_op(input_op, name, ksize, strides):
         kernel = tf.get_variable("kernel",
                                  shape=[kh, kw, n_in, n_out],
                                  dtype=tf.float32,
-                                 initializer=tf.contrib.layers.xavier_initializer_conv2d())
+                                 initializer=tf.truncated_normal_initializer(stddev=0.1))
         conv = tf.nn.conv2d(input_op, kernel, strides, padding='SAME')
         biases = tf.get_variable('biases', shape=[n_out], initializer=tf.constant_initializer(0),  dtype=tf.float32)
         z = tf.nn.bias_add(conv, biases)
         out = tf.nn.relu(z)
         return out
 
+
 def fc_op(input_op, name, n_out, activation='relu'):
     with tf.variable_scope(name) as scope:
         n_in = input_op.get_shape()[-1].value
+
         weights = tf.get_variable("weights",
                                   shape=[n_in, n_out],
                                   dtype=tf.float32,
-                                  initializer=tf.contrib.layers.xavier_initializer())
+                                  initializer=tf.truncated_normal_initializer(stddev=0.1))
         biases = tf.get_variable('biases', shape=[n_out], initializer=tf.constant_initializer(0),  dtype=tf.float32)
         z=tf.matmul(input_op, weights) + biases
         if activation=='relu':
@@ -32,8 +33,6 @@ def fc_op(input_op, name, n_out, activation='relu'):
             out = tf.nn.softmax(z)
         else:
             out=z
-        # regularizer = tf.contrib.layers.l2_regularizer(REG_RATE)
-        # tf.add_to_collection('losses', regularizer(weights))
         return out
 
 
@@ -51,15 +50,15 @@ def inference(x, train_flag=False):
     flattened_shape = shp[1].value * shp[2].value * shp[3].value
     resh1 = tf.reshape(pool2, [-1, flattened_shape] )
     #
-    fc3=fc_op(resh1,name="fc3",n_out=512)
+    fc3=fc_op(resh1,name="fc3",n_out=128)
     if train_flag:
         fc3=tf.nn.dropout(fc3, 0.5)
 
-    fc4=fc_op(fc3,name="fc4",n_out=512)
+    fc4=fc_op(fc3,name="fc4",n_out=128)
     if train_flag:
         fc4=tf.nn.dropout(fc4, 0.5)
 
-    output=fc_op(fc4,"output", 10, None)
+    output=fc_op(fc4,"output", 10, 'softmax')
     return output
 
 

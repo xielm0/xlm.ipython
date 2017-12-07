@@ -57,10 +57,12 @@ def inference_alex(x_image,is_training=False):
 
 
 # inference = inference_alex
-import inference_res as inference
+import inference_dense as inference
 inference = inference.inference
 
 """
+在cifar10试验中，若严格按照论文中的结构，则效果不好。主要是因为:
+image_net的input size=224x224,而cifar10的size=24x24
 实验数据：
 1. lenet, act=relu ,  sgd=0.5, acc=0.776
    lenet, act=swish,  sgd=0.5, acc=0.816
@@ -71,6 +73,7 @@ inference = inference.inference
 3, google, act=relu , sgd=0.5, 5x5,1, acc=0.827
    google, act=relu , sgd=0.5, 5x5,1,bn, acc=0.866
 4, res , act=relu , sgd=0.5 , first_block=True , acc=0.853
-5, resx,
-6，xlm, act=relue , sgd=0.5,  stride=1,0.851
+5, resx, acc =0.863
+6，dense, acc=0.857
+6，xlm,  acc=0.866 , swish =0.877
 """
