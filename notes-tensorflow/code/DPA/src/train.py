@@ -126,7 +126,7 @@ def build_model(x_list, y_):
                 x_category_max =x_list[2]
                 tmp_tensors=[x_list[0][a:b, ],x_list[1][a:b, ],x_category_max]
                 # 第一个GPU已经创建了varibales,其余GPU中使用模型参数时，需要reuse_variables
-                cur_loss = inference.get_loss(tmp_tensors, y_[a:b, ],  scope)
+                cur_loss = get_loss(tmp_tensors, y_[a:b, ],  scope)
                 loss_gpu_dir['GPU_%d' % i] = cur_loss
                 #
                 tf.get_variable_scope()._reuse = True

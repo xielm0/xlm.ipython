@@ -70,7 +70,7 @@ def read_csv(files_path,batch_size):
     data = tf.decode_csv(records=value,
                          record_defaults=record_defaults,
                          field_delim=',')
-    min_after_dequeue = 10000
+    min_after_dequeue = 5000
     capacity = min_after_dequeue + 3 * batch_size
     batch_data = tf.train.batch([data], batch_size=batch_size, capacity=capacity, num_threads=4, allow_smaller_final_batch=True)
     return  batch_data
