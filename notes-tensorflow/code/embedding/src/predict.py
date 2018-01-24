@@ -35,9 +35,9 @@ vocabulary_size=train.vocabulary_size
 embedding_size=train.embedding_size
 embedding_size_list=train.embedding_size_list
 
-def inference(train_inputs):
+def inference(train_inputs,cid):
     #
-    x_max  = input.get_max()
+    x_max  = input.get_max(cid)
 
     #
     embed_list = []
@@ -63,7 +63,7 @@ def evaluate(cid):
     # 前向传播
     i= run_cid_list.index(cid) % 2
     with tf.device('/gpu:%d'% i ):
-        y = inference(x_ )
+        y = inference(x_ ,cid)
 
     os.system('/bin/rm -r %s/*' % ( os.path.join(LOCAL_RESULT_PATH , cid)))
     file_list = input.get_file_list(os.path.join(LOCAL_APPLY_PATH , cid))
@@ -76,23 +76,22 @@ def evaluate(cid):
         threads = tf.train.start_queue_runners(coord=coord)
 
         # tf.train.get_checkpoint_state 会自动找到目录中最新模型的文件名。
-        ckpt = tf.train.get_checkpoint_state(train.MODEL_SAVE_PATH)
+        model_save_path =os.path.join(train.MODEL_SAVE_PATH,cid)
+        ckpt = tf.train.get_checkpoint_state(model_save_path)
 
         if ckpt and ckpt.model_checkpoint_path:
             # 加载模型，及模型的变量
             saver.restore(sess, ckpt.model_checkpoint_path)
 
             for idx,file in enumerate(file_list):
-                t0 = time.time()
                 sku_id, X = input.get_apply_data(file)
-                t1 = time.time()
-                print("read cost %s sec" %(t1-t0))
 
                 # 计算epoch_num
                 n = len(sku_id)
                 epoch_num = n / BATCH_SIZE if n % BATCH_SIZE == 0 else (n / BATCH_SIZE) + 1
                 print("n= %s , epoch_num= %s " %(n, epoch_num))
 
+                t1 = time.time()
                 y_pred = []
                 for i in range(epoch_num):
                     # print('loading test data...')
@@ -132,6 +131,7 @@ def main(argv=None):
         print("start train cid=" + cid)
         p=Process(target=evaluate,args=(cid,))
         p.start()
+        p.join()
 
 
 if __name__ == '__main__':

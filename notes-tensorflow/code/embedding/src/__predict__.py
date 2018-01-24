@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import os,sys
 
+
 def get_filepath():
     path = sys.path[0]
     if os.path.isdir(path):
@@ -13,21 +14,16 @@ os.chdir(local_path)
 
 #-----------------------------------------
 from log import logger
-import train
-import download
-import input
-
+import predict
+import upload
 
 def main():
     #
-    logger.info("start run download.py")
-    download.main()
+    logger.info("start run predict.py")
+    predict.main()
     #
-    logger.info("start run download.py")
-    input.gen_train_tf()
-    #
-    logger.info("start run train.py")
-    train.main()
+    logger.info("start run upload.py")
+    upload.main()
 
 
 if __name__ == '__main__':

@@ -7,8 +7,8 @@ import pandas as pd
 import download
 import os
 import time
-import logging
 from multiprocessing import Pool
+from log import logger
 
 
 # 设置Tensorflow按需申请GPU资源
@@ -45,6 +45,7 @@ N=6
 LOCAL_TRAIN_PATH = download.LOCAL_TRAIN_PATH
 LOCAL_APPLY_PATH = download.LOCAL_APPLY_PATH
 cid_list=download.cid_list
+run_cid_list=download.run_cid_list
 
 TF_TRAIN_PATH ="../data/TF/"
 
@@ -62,7 +63,7 @@ for cid in cid_list:
 def get_file_list(dir_path):
     file_list = os.listdir(dir_path)
     file_list = filter(lambda x: x[:4] == 'part', file_list)
-    file_list = map(lambda x: dir_path + x, file_list)
+    file_list = map(lambda x: os.path.join(dir_path , x), file_list)
     return file_list
 
 
@@ -73,11 +74,11 @@ def pd_read_files(dir_path):
     file_list = map(lambda x: dir_path + x, file_list)
     df_all=pd.DataFrame(columns=range(N))
     for file in file_list:
-        print("reading file " + file)
+        logger.info("reading file " + file)
         df = pd.read_csv(file, sep="\t", header=None, names=range(N) )
         df_all = pd.concat([df_all, df])
     t2 = time.time()
-    print('read files cost %f sec' % (t2-t1))
+    logger.info('read files cost %f sec' % (t2-t1))
     return df_all
 
 
@@ -133,7 +134,7 @@ def write_TFRecords(data,TFRecoard_path):
 
 def gen_a_tf(arg_tuple):
         txt_file, tensor_file = arg_tuple[:2]
-        print("reading file " + txt_file)
+        logger.info("reading file " + txt_file)
         df = pd.read_csv(txt_file, sep="\t", header=None, names=range(N) )
         data = df.values
         # 保存为 TFRecords
@@ -213,12 +214,12 @@ def get_apply_data(file):
     debug = False
     if debug:
         t1=time.time()
-    print("reading file " + file)
+    logger.info("reading file " + file)
     df = pd.read_csv(file, sep="\t", header=None, names=range(N) )
 
     if debug:
         t2=time.time()
-        print("read cost %s sec" %(t2-t1))
+        logger.info("read cost %s sec" %(t2-t1))
     # data = df.values
     sku_id = df.iloc[:,0].values
     # Y = data[:,2]

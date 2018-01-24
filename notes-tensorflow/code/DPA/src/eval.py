@@ -8,7 +8,7 @@ import numpy as np
 import inference
 import train
 import input
-import processing as pr
+import preprocessing as pr
 
 N=input.N
 M=input.M  #多少个连续特征

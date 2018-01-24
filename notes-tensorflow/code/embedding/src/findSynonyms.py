@@ -113,7 +113,6 @@ def findSynonyms_batch(sku_list,embeddings,file_name,top_k=10):
             s=sku_list[a+j] + "\t" + ",".join(str)
             return s
 
-        pool.map
 
         for j in range(b-a):
             nearest = (-sim[j,:]).argsort()[1:top_k+1]  # nearst是主要的耗时环节，占99%

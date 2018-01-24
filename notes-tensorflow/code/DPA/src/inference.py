@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import tensorflow as tf
 import numpy as np
-import processing as pr
+import preprocessing as pr
 import input
 
 # 配置神经网络的参数

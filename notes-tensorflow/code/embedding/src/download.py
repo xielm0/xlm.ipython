@@ -11,6 +11,7 @@ import socket
 HDFS_USER = 'jd_ad'
 HDFS_URLS = ['http://172.22.90.104:50070','http://172.22.90.103:50070']
 worker_machine=["172.18.161.13","172.18.161.27","172.18.161.19","172.18.161.12"]
+n_worker = len(worker_machine)
 
 HDFS_TRAIN_PATH="ads_sz/app.db/app_szad_m_dyrec_sku2vec_train_tensor/data/"
 HDFS_DICT_PATH="ads_sz/app.db/app_szad_m_dyrec_sku2vec_train_tensor/index_max/"
@@ -21,6 +22,8 @@ LOCAL_DICT_PATH="../data/dict/"
 LOCAL_APPLY_PATH= "../data/apply/"
 
 cid_list=["1315","1316","9987","737","670","1318","1319","1320","1620","1713","6728","0"]
+# cid_list=["ALL"]
+
 
 if not os.path.exists(LOCAL_TRAIN_PATH):
     os.mkdir(LOCAL_TRAIN_PATH)
@@ -43,6 +46,7 @@ for cid in cid_list:
 
 # CLASSPATH=$(${HADOOP_HDFS_HOME}/bin/hadoop classpath --glob) python download.py
 
+
 def get_ip():
     """
     获取本机的ip
@@ -56,6 +60,14 @@ def get_ip():
     # s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     # ip=socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', ifname[:15]))[20:24])
     return ip
+
+
+run_cid_list=[]
+index=worker_machine.index(get_ip())
+for idx,cid in enumerate(cid_list):
+    if idx % n_worker == index:
+        run_cid_list.append(cid)
+
 
 def getdirsize(dir):
     size = 0
@@ -121,11 +133,14 @@ def download_dir(hdfs_dir_path,local_dir,flag=1):
     print('download %dM files cost %fsec' % (filesize, duration))
 
 
-def get_recur_dir(dir_path):
+def get_recur_dir(dir_path,flag=1):
     """
     get_recur_dir(LOCAL_TRAIN_PATH)
     """
-    return map(lambda cid:os.path.join(dir_path,cid), cid_list)
+    if flag==1:
+        return map(lambda cid:os.path.join(dir_path,cid), run_cid_list)
+    else:
+        return map(lambda cid:os.path.join(dir_path,cid), cid_list)
 
 
 def download_dir_recur(hdfs_dir_path,local_dir,flag=1):
@@ -144,8 +159,8 @@ def download_dir_recur(hdfs_dir_path,local_dir,flag=1):
 
 
 def main():
-    # download_dir_recur(HDFS_TRAIN_PATH,LOCAL_TRAIN_PATH)
-    # download_dir_recur(HDFS_DICT_PATH,LOCAL_DICT_PATH)
+    download_dir_recur(HDFS_TRAIN_PATH,LOCAL_TRAIN_PATH)
+    download_dir_recur(HDFS_DICT_PATH,LOCAL_DICT_PATH)
     download_dir_recur(HDFS_APPLY_PATH,LOCAL_APPLY_PATH)
 
 if __name__ == '__main__':

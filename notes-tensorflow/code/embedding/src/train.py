@@ -6,12 +6,14 @@ import math
 import time
 import os
 # import six.moves.reduce as reduce
+from multiprocessing import Process
+from log import logger
 
 N_GPU=4
 learning_rate=0.001
 batch_size =128
 num_sampled=64
-vocabulary_size=2000000+1
+vocabulary_size=100000+1
 
 discrete_nums= 5
 embedding_size_list=[8,12,16,32,32]
@@ -23,6 +25,8 @@ MODEL_SAVE_PATH = "../models/"
 MODEL_NAME = "model.ckpt"
 
 cid_list=input.cid_list
+run_cid_list=input.run_cid_list
+
 for cid in cid_list:
     path = os.path.join(MODEL_SAVE_PATH,cid)
     if not os.path.exists(path):
@@ -36,18 +40,6 @@ CONFIG = tf.ConfigProto(
     log_device_placement=False)
 CONFIG.gpu_options.allow_growth = True
 
-
-##############################
-from multiprocessing import Process
-import download
-index=download.worker_machine.index(download.get_ip())
-n_worker = len(download.worker_machine)
-run_cid_list=[]
-for idx,cid in enumerate(cid_list):
-    if idx % n_worker == index:
-        run_cid_list.append(cid)
-
-##############################
 
 
 def average_gradients(tower_grads):
@@ -117,8 +109,8 @@ def build_graph(train_inputs, train_labels, cid):
 """
 def build_model_single(train_inputs,train_labels,cid):
     inital_learning_rate=1e-3
-    decay_steps=100
-    decayg_rate = 0.97
+    decay_steps=1000
+    decayg_rate = 0.99
 
     global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),trainable=False)
     learning_rate = tf.train.exponential_decay(inital_learning_rate, global_step, decay_steps, decayg_rate)
@@ -134,8 +126,8 @@ def build_model_single(train_inputs,train_labels,cid):
 
 def build_model_multi(train_inputs,train_labels,cid):
     inital_learning_rate=1e-3
-    decay_steps=100
-    decayg_rate = 0.97
+    decay_steps=1000
+    decayg_rate = 0.99
 
     global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0),trainable=False)
     learning_rate = tf.train.exponential_decay(inital_learning_rate, global_step, decay_steps, decayg_rate)
@@ -231,7 +223,7 @@ def train(cid):
                 num_examples_per_step = batch_size
                 examples_per_sec = num_examples_per_step / duration
                 format_str = ('step %d, loss = %.10f (%.1f examples sec)')
-                print(format_str % (step, loss_vlaue, examples_per_sec))
+                logger.info(format_str % (step, loss_vlaue, examples_per_sec))
 
                 # 写tensorboard日志
                 summary = sess.run(merged_summary_op)
@@ -246,12 +238,13 @@ def train(cid):
         coord.join(threads)
 
 def main():
+    # train(cid)
     # 多进程：
     for idx,cid in enumerate(run_cid_list):
-        # train(cid)
-        print("start train cid=" + cid)
+        logger.info("start train cid=" + cid)
         p=Process(target=train,args=(cid,))
         p.start()
+        p.join()
 
 
 if __name__ == '__main__':
