@@ -1,37 +1,26 @@
 # -*- coding:utf-8 -*-
 import os,sys
+def cd_cur_dir():
+    abspath = os.path.dirname(__file__)
+    if abspath=='':
+        path =sys.path[0]
+    else:
+        path = abspath
+    # change dir
+    print("change dir:%s" %path)
+    os.chdir(path)
 
-def get_filepath():
-    path = sys.path[0]
-    if os.path.isdir(path):
-        return path
-    elif os.path.isfile(path):
-        return os.path.dirname(path)
-local_path=get_filepath()
-print("change dir:%s" %local_path)
-os.chdir(local_path)
-
+cd_cur_dir()
 #-----------------------------------------
-from log import logger
 import train
-import download
-import input
-
+import log
 
 def main():
     #
-    logger.info("start run download.py")
-    download.main()
+    logger=log.getLogger()
     #
-    logger.info("start run download.py")
-    input.gen_train_tf()
-    #
-    logger.info("start run train.py")
     train.main()
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except:
-        logger.exception('exception')
+    main()

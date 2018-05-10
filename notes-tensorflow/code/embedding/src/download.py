@@ -1,11 +1,11 @@
 # -*- coding:utf-8 -*-
 from adsz_data.hdfsclient import get_client
 from adsz_data.hdfsclient import list as ll
-from adsz_data.hdfsclient import walk
 import os
 import time
 from multiprocessing import Pool
 import socket
+import logging
 # import fcntl, struct
 
 HDFS_USER = 'jd_ad'
@@ -13,40 +13,23 @@ HDFS_URLS = ['http://172.22.90.104:50070','http://172.22.90.103:50070']
 worker_machine=["172.18.161.13","172.18.161.27","172.18.161.19","172.18.161.12"]
 n_worker = len(worker_machine)
 
-HDFS_TRAIN_PATH="ads_sz/app.db/app_szad_m_dyrec_sku2vec_train_tensor/data/"
-HDFS_DICT_PATH="ads_sz/app.db/app_szad_m_dyrec_sku2vec_train_tensor/index_max/"
-HDFS_APPLY_PATH="ads_sz/app.db/app_szad_m_dyrec_sku2vec_train_tensor/skulist/"
+HDFS_TRAIN_PATH="ads_sz/app.db/app_szad_m_dyrec_sku2vec_train_tensor/train_data/"
+HDFS_APPLY_PATH="ads_sz/app.db/app_szad_m_dyrec_sku2vec_train_tensor/apply_data/"
+REMOTE_TRAIN_PATH="hdfs://ns3/user/jd_ad/"+HDFS_TRAIN_PATH
+REMOTE_APPLY_PATH="hdfs://ns3/user/jd_ad/"+HDFS_APPLY_PATH
 
 LOCAL_TRAIN_PATH="../data/train/"
-LOCAL_DICT_PATH="../data/dict/"
 LOCAL_APPLY_PATH= "../data/apply/"
 
-cid_list=["1315","1316","9987","737","670","1318","1319","1320","1620","1713","6728","0"]
-# cid_list=["ALL"]
 
-
-if not os.path.exists(LOCAL_TRAIN_PATH):
-    os.mkdir(LOCAL_TRAIN_PATH)
-if not os.path.exists(LOCAL_DICT_PATH):
-    os.mkdir(LOCAL_DICT_PATH)
-if not os.path.exists(LOCAL_APPLY_PATH):
-    os.mkdir(LOCAL_APPLY_PATH)
-
-
-for cid in cid_list:
-    path = os.path.join(LOCAL_TRAIN_PATH,cid)
-    if not os.path.exists(path):
-        os.mkdir(path)
-    path = os.path.join(LOCAL_DICT_PATH,cid)
-    if not os.path.exists(path):
-        os.mkdir(path)
-    path = os.path.join(LOCAL_APPLY_PATH,cid)
-    if not os.path.exists(path):
-        os.mkdir(path)
+def reset_dir(dir_path):
+    if os.path.exists(dir_path):
+        cmd="/bin/rm -r %s" %dir_path
+        logging.info(cmd)
+        os.system(cmd)
+    os.mkdir(dir_path)
 
 # CLASSPATH=$(${HADOOP_HDFS_HOME}/bin/hadoop classpath --glob) python download.py
-
-
 def get_ip():
     """
     获取本机的ip
@@ -62,12 +45,7 @@ def get_ip():
     return ip
 
 
-run_cid_list=[]
 index=worker_machine.index(get_ip())
-for idx,cid in enumerate(cid_list):
-    if idx % n_worker == index:
-        run_cid_list.append(cid)
-
 
 def getdirsize(dir):
     size = 0
@@ -117,51 +95,30 @@ def download_dir(hdfs_dir_path,local_dir,flag=1):
             if index == i % n_worker:
                 download_file_list.append(file_list_hdfs_local[i])
 
-    #
-    print('delete path ' + local_dir)
-    os.system('/bin/rm ' + os.path.join(local_dir,'*'))
     #将hdfs上的数据下载本地
     # 开启多线程
     start_time = time.time()
-    pool = Pool(32)
-    print('start downloading...')
+    pool = Pool(30)
+    logging.info('start downloading...')
     pool.map(func=download_file, iterable=download_file_list)
     pool.close()
     pool.join()
     duration = time.time() - start_time
     filesize = getdirsize(local_dir) / 1024 / 1024
-    print('download %dM files cost %fsec' % (filesize, duration))
+    logging.info('download %dM files cost %fsec' % (filesize, duration))
 
 
-def get_recur_dir(dir_path,flag=1):
-    """
-    get_recur_dir(LOCAL_TRAIN_PATH)
-    """
-    if flag==1:
-        return map(lambda cid:os.path.join(dir_path,cid), run_cid_list)
-    else:
-        return map(lambda cid:os.path.join(dir_path,cid), cid_list)
-
-
-def download_dir_recur(hdfs_dir_path,local_dir,flag=1):
-    """
-    文件夹下递归下载
-    """
-
-    hdfs_dir_list = get_recur_dir(hdfs_dir_path)
-    local_dir_list= get_recur_dir(local_dir)
-
-    for i in range(len(hdfs_dir_list)):
-        print(hdfs_dir_list[i] ,local_dir_list[i])
-        if not os.path.exists(local_dir_list[i]):
-             os.mkdir(local_dir_list[i])
-        download_dir(hdfs_dir_list[i],local_dir_list[i],flag)
-
+def download_train():
+    reset_dir(LOCAL_TRAIN_PATH)
+    download_dir(HDFS_TRAIN_PATH,LOCAL_TRAIN_PATH)
+def download_apply():
+    reset_dir(LOCAL_APPLY_PATH)
+    download_dir(HDFS_APPLY_PATH,LOCAL_APPLY_PATH,2)
 
 def main():
-    download_dir_recur(HDFS_TRAIN_PATH,LOCAL_TRAIN_PATH)
-    download_dir_recur(HDFS_DICT_PATH,LOCAL_DICT_PATH)
-    download_dir_recur(HDFS_APPLY_PATH,LOCAL_APPLY_PATH)
+    logging.basicConfig(level=logging.INFO)
+    download_apply()
+
 
 if __name__ == '__main__':
     main()

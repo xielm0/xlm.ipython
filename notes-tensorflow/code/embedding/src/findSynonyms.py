@@ -83,7 +83,6 @@ def findSynonyms(sku_list,embeddings,file_name,top_k=10):
     f.close()
     print("write file: %s, cost %s sec " %(result_file,time.time()-t0))
 
-from multiprocessing.pool import ThreadPool
 
 def findSynonyms_batch(sku_list,embeddings,file_name,top_k=10):
     n=len(sku_list)
