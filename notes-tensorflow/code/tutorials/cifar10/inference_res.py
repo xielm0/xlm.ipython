@@ -39,7 +39,7 @@ def residual(x, name, out_depth, stride=1, is_training=False,first_block=False):
 
 
 def residual_v2(x, name, out_depth, stride=1, is_training=False, first_block=False):
-    """bn->rn->conv , 将conv的结果进行shortcut"""
+    """bn->relu->conv , 将conv的结果进行shortcut"""
     activation_fn=tf.nn.relu
     with tf.variable_scope(name):
         mid_depth=out_depth/4
@@ -84,10 +84,10 @@ def residual_v3(x, name, out_depth, stride=1, is_training=False):
         mid_depth=out_depth/4
         in_depth = x.get_shape()[-1].value
         with tf.variable_scope('sub1'):
-                orig_x=x
-                x = slim2.conv2d(x, 'conv1', mid_depth,[1,1], stride=1,activation_fn=None)
-                x = slim2.batch_norm('bn1', x, is_training)
-                x = activation_fn(x)
+            orig_x=x
+            x = slim2.conv2d(x, 'conv1', mid_depth,[1,1], stride=1,activation_fn=None)
+            x = slim2.batch_norm('bn1', x, is_training)
+            x = activation_fn(x)
 
         with tf.variable_scope('sub2'):
             x = slim2.conv2d(x, 'conv2', mid_depth,[3,3], stride=stride, activation_fn=None)
@@ -122,7 +122,6 @@ def inference(input_x,is_training=False):
         # net = slim2.batch_norm('bn_first', net, is_training)
         # net = tf.nn.relu(net,"relu_first")
         net = tf.nn.max_pool(net, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool1')
-
     # res1
     net = res_fuc(net,"res64_1",128,1, is_training,first_block=True)
     net = res_fuc(net,"res64_2",128,1, is_training)

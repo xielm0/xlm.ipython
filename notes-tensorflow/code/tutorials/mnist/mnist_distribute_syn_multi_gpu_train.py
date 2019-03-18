@@ -101,7 +101,6 @@ def main(argv=None):
         server.join()
         # ps服务器运行到此为止
 
-
     # 以下worker服务器做的事情
     is_chief = (FLAGS.task_id == 0)
     worker_device = "/job:worker/task:%d" % FLAGS.task_id

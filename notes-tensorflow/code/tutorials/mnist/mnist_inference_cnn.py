@@ -36,7 +36,7 @@ def fc_op(input_op, name, n_out, activation='relu'):
         return out
 
 
-def inference(x, train_flag=False):
+def inference(x, train_flag=False, regularizer=None):
     #
     x_image = tf.reshape(x, [-1,28,28,1])
     conv1 = conv_op(x_image,name="conv1", ksize=[5, 5, 32], strides=[1, 1, 1, 1])

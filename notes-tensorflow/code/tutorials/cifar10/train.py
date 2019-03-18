@@ -56,7 +56,7 @@ def build_model(image_holder, label_holder):
     variables_averages_op = variable_averages.apply(tf.trainable_variables())
     # train_op = tf.group(apply_gradient_op,variables_averages_op)
     # add batch_nrom operation
-    train_op = tf.group(apply_gradient_op,variables_averages_op, *BN_OPS)
+    train_op = tf.group(apply_gradient_op,variables_averages_op)
 
     return loss, train_op
 

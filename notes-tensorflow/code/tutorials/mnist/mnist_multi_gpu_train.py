@@ -35,6 +35,12 @@ def get_loss(x, y_, scope):
 
 # 计算每一个变量的平均梯度
 def average_gradients(tower_grads):
+    """
+    同步模式，计算梯度的平均值
+    :param tower_grads: 一个list ,里面元素是4个list , 每个list的元素是turple类似：a=[[(1,2),(2,3)],[(101,2),(102,3)]]
+    zip(*a), 即[((1, 2), (101, 2)), ((2, 3), (102, 3))]
+    :return:
+    """
     average_grads = []
     for grad_and_vars in zip(*tower_grads):
         grads = []
@@ -114,12 +120,16 @@ def main(argv=None):
     cmd = "/bin/rm  " + TENSORBOARD_PATH + "events.out.tfevents.*"
     os.system(cmd)
     summary_op = tf.summary.merge_all()
+    #
+    all_vars = tf.trainable_variables()
+    for v in all_vars:
+      print(v)
 
     #
     saver = tf.train.Saver()
-
+    init = tf.global_variables_initializer()
     with tf.Session(config=SESS_CONFIG) as sess:
-        tf.global_variables_initializer().run()
+        sess.run(init)
         #
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)

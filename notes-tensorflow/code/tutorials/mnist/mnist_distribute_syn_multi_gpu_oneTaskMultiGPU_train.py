@@ -97,98 +97,97 @@ def main(argv=None):
     server = tf.train.Server(
         cluster, job_name=FLAGS.job_name, task_index=FLAGS.task_id)
 
+    is_chief = (FLAGS.task_id == 0)
     if FLAGS.job_name == 'ps':
         server.join()
         # ps服务器运行到此为止
-
+    elif FLAGS.job_name == "worker":
     # 以下worker服务器做的事情
-    is_chief = (FLAGS.task_id == 0)
-    worker_device = "/job:worker/task:%d/cpu:0" % FLAGS.task_id
-    with tf.Graph().as_default(), tf.device(
-            tf.train.replica_device_setter(
-                worker_device=worker_device,
-                ps_device="/job:ps/cpu:0",
-                cluster=cluster)):
-        x, y_ = get_input()
+        with tf.Graph().as_default(), tf.device(
+                tf.train.replica_device_setter(
+                    worker_device="/job:worker/task:%d/cpu:0" % FLAGS.task_id,
+                    ps_device="/job:ps/cpu:0",
+                    cluster=cluster)):
+            x, y_ = get_input()
 
 
-        regularizer = tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
+            regularizer = tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
 
-        y = mnist_inference_cnn.inference(x, train=True, regularizer=regularizer)
+            y = mnist_inference_cnn.inference(x, train=True, regularizer=regularizer)
 
-        global_step = tf.get_variable(
-            'global_step', [], initializer=tf.constant_initializer(0),
-            trainable=False)
-        # learning_rate = tf.train.exponential_decay(
-        #     LEARNING_RATE_BASE, global_step, 60000 / BATCH_SIZE,
-        #     LEARNING_RATE_DECAY
-        # )
-        learning_rate = LEARNING_RATE_BASE
-        # grad_opt = tf.train.GradientDescentOptimizer(learning_rate)
-        grad_opt = tf.train.AdamOptimizer(learning_rate)
-        tower_grads = []
+            global_step = tf.get_variable(
+                'global_step', [], initializer=tf.constant_initializer(0),
+                trainable=False)
+            # learning_rate = tf.train.exponential_decay(
+            #     LEARNING_RATE_BASE, global_step, 60000 / BATCH_SIZE,
+            #     LEARNING_RATE_DECAY
+            # )
+            learning_rate = LEARNING_RATE_BASE
+            # grad_opt = tf.train.GradientDescentOptimizer(learning_rate)
+            grad_opt = tf.train.AdamOptimizer(learning_rate)
+            tower_grads = []
 
-        # 记录每个GPU的损失函数值
-        loss_gpu_dir = {}
-        #
-        # 将神经网络的优化过程跑在不同的GPU上
-        for i in xrange(N_GPU):
-            with tf.device("/job:worker/task:%d/gpu:%d" % (FLAGS.task_id, i)):
-                with tf.name_scope('GPU_%d' % i) as scope:
+            # 记录每个GPU的损失函数值
+            loss_gpu_dir = {}
+            #
+            # 将神经网络的优化过程跑在不同的GPU上
+            for i in xrange(N_GPU):
+                with tf.device("/job:worker/task:%d/gpu:%d" % (FLAGS.task_id, i)):
+                    with tf.name_scope('GPU_%d' % i) as scope:
 
-                    # cur_loss = get_loss(x, y_, regularizer, scope)
-                    #
-                    cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y, labels=y_))
-                    regularization_loss = tf.add_n(tf.get_collection('losses'))
-                    cur_loss = cross_entropy + regularization_loss
-                    loss_gpu_dir['GPU_%d' % i] = cur_loss
-                    #
-                    tf.get_variable_scope().reuse_variables()
-                    grads = grad_opt.compute_gradients(cur_loss)
-                    tower_grads.append(grads)
-        #
-        for los in loss_gpu_dir:
-            tf.summary.scalar('GPU Loss/' + los, loss_gpu_dir[los])
-        #
+                        # cur_loss = get_loss(x, y_, regularizer, scope)
+                        #
+                        cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=y, labels=y_))
+                        regularization_loss = tf.add_n(tf.get_collection('losses'))
+                        cur_loss = cross_entropy + regularization_loss
+                        loss_gpu_dir['GPU_%d' % i] = cur_loss
+                        #
+                        tf.get_variable_scope().reuse_variables()
+                        grads = grad_opt.compute_gradients(cur_loss)
+                        tower_grads.append(grads)
+            #
+            for los in loss_gpu_dir:
+                tf.summary.scalar('GPU Loss/' + los, loss_gpu_dir[los])
+            #
 
-        # 计算变量的平均梯度，并输出到TensorBoard日志
-        grads = average_gradients(tower_grads)
-        # for grad, var in grads:
-        #     if grad is not None:
-        #         tf.summary.histogram(
-        #             'gradients_on_average/%s' % var.op.name, grad)
-        # 使用平均梯度更新参数
-        tf.get_variable_scope()._reuse = False
+            # 计算变量的平均梯度，并输出到TensorBoard日志
+            grads = average_gradients(tower_grads)
+            # for grad, var in grads:
+            #     if grad is not None:
+            #         tf.summary.histogram(
+            #             'gradients_on_average/%s' % var.op.name, grad)
+            # 使用平均梯度更新参数
+            tf.get_variable_scope()._reuse = False
 
-        opt = tf.train.SyncReplicasOptimizer(
-            grad_opt,
-            replicas_to_aggregate=n_workers,
-            total_num_replicas=n_workers,
-            # replica_id=FLAGS.task_id)
-            use_locking=True)
+            opt = tf.train.SyncReplicasOptimizer(
+                grad_opt,
+                replicas_to_aggregate=n_workers,
+                total_num_replicas=n_workers,
+                # replica_id=FLAGS.task_id)
+                use_locking=True)
 
-        apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
-        for var in tf.trainable_variables():
-            tf.summary.histogram(var.op.name, var)
+            apply_gradient_op = opt.apply_gradients(grads, global_step=global_step)
+            for var in tf.trainable_variables():
+                tf.summary.histogram(var.op.name, var)
 
-        # 计算变量的滑动平均值
-        variable_averages = tf.train.ExponentialMovingAverage(
-            MOVING_AVERAGE_DECAY, global_step)
-        variables_averages_op = variable_averages.apply(
-            tf.trainable_variables())
-        tf.get_variable_scope()._reuse = True
+            # 计算变量的滑动平均值
+            variable_averages = tf.train.ExponentialMovingAverage(
+                MOVING_AVERAGE_DECAY, global_step)
+            variables_averages_op = variable_averages.apply(
+                tf.trainable_variables())
+            tf.get_variable_scope()._reuse = True
 
-        train_op = tf.group(apply_gradient_op, variables_averages_op)
-        # train_op = apply_gradient_op
+            train_op = tf.group(apply_gradient_op, variables_averages_op)
+            # train_op = apply_gradient_op
 
-        saver = tf.train.Saver()
-        summary_op = tf.summary.merge_all()
-        init_op = tf.initialize_all_variables()
+            saver = tf.train.Saver()
+            summary_op = tf.summary.merge_all()
+            init_op = tf.initialize_all_variables()
 
-        # 在同步模式下,主计算服务器需要协调不同计算服务器计算得到所有的参数梯度并最终更新参数。这需要主计算服务器完成一些额外的初始化操作
-        if is_chief:
-            chief_queue_runner = opt.get_chief_queue_runner()
-            init_tokens_op = opt.get_init_tokens_op(0)
+            # 在同步模式下,主计算服务器需要协调不同计算服务器计算得到所有的参数梯度并最终更新参数。这需要主计算服务器完成一些额外的初始化操作
+            if is_chief:
+                chief_queue_runner = opt.get_chief_queue_runner()
+                init_tokens_op = opt.get_init_tokens_op(0)
 
         sv = tf.train.Supervisor(is_chief=is_chief,
                                  logdir=MODEL_SAVE_PATH,

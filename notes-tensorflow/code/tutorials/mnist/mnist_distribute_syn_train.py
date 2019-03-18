@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 
-import mnist_inference_dnn
+import mnist_inference_cnn
 
 BATCH_SIZE = 100
 LEARNING_RATE_BASE = 0.01
@@ -48,7 +48,7 @@ def build_model(x, y_, n_workers):
     # L2
     regularizer = tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
     #
-    y = mnist_inference_dnn.inference(x, regularizer)
+    y = mnist_inference_cnn.inference(x, regularizer)
     #
     global_step = tf.Variable(0, trainable=False)
 

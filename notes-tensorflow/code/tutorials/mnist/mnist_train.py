@@ -26,8 +26,7 @@ def get_loss(logits, labels, scope):
     # y_conv = tf.clip_by_value(tf.nn.softmax(logits), 1e-10, 1.0)
     cross_entropy = tf.reduce_mean(-tf.reduce_sum(labels * tf.log(logits), reduction_indices=[1]))
     # cross_entropy_1 = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels)
-    # cross_entropy_1 = tf.nn.sparse_softmax_cross_entropy_with_logits(
-    #     logits=logits, labels=tf.argmax(labels,1))
+    # cross_entropy_1 = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=tf.argmax(labels,1))
     # cross_entropy = tf.reduce_mean(cross_entropy_1, name='cross_entropy')
     # scope="GPU_i" ,so计算当前GPU上的loss
     # regularization_loss = tf.add_n(tf.get_collection('losses', scope))

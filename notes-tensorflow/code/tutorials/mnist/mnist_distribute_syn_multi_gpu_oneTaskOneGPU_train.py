@@ -42,9 +42,9 @@ def build_model(x, y_, n_worker):
     y = mnist_inference_cnn.inference(x, True, regularizer)
     global_step = tf.Variable(0, trainable=False)
 
-    variable_averages = tf.train.ExponentialMovingAverage(
-        MOVING_AVERAGE_DECAY, global_step)
-    variables_averages_op = variable_averages.apply(tf.trainable_variables())
+    # variable_averages = tf.train.ExponentialMovingAverage(
+    #     MOVING_AVERAGE_DECAY, global_step)
+    # variables_averages_op = variable_averages.apply(tf.trainable_variables())
 
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
         logits=y, labels=tf.argmax(y_, 1))
@@ -64,7 +64,8 @@ def build_model(x, y_, n_worker):
         # replica_id=FLAGS.task_id)
     )
     apply_gradient_op = opt.minimize(loss, global_step=global_step)
-    train_op = tf.group(apply_gradient_op, variables_averages_op)
+    train_op =apply_gradient_op
+    # train_op = tf.group(apply_gradient_op, variables_averages_op)
     return global_step, loss, train_op, opt
 
 
@@ -89,15 +90,8 @@ def main(argv=None):
                 worker_device="/job:worker/task:%d/gpu:%d" % (FLAGS.task_id, FLAGS.gpu_id),
                 ps_device="/job:ps/cpu:0",
                 cluster=cluster)):
-        x = tf.placeholder(tf.float32, [
-            None,
-            mnist_inference_cnn.IMAGE_SIZE,
-            mnist_inference_cnn.IMAGE_SIZE,
-            mnist_inference_cnn.NUM_CHANNELS],
-            name='x-input')
-        y_ = tf.placeholder(
-            tf.float32, [None, mnist_inference_cnn.OUTPUT_NODE],
-            name='y-input')
+        x = tf.placeholder(tf.float32, [None,28,28,1],name='x-input')
+        y_ = tf.placeholder(tf.float32, [None, 784],name='y-input')
         global_step, loss, train_op, opt = build_model(
             x, y_, n_workers)
 
